@@ -34,11 +34,11 @@ similarity_measure = 'cosine'
 for path in paths:
     # Open and extract each zip file
     with zipfile.ZipFile(path, 'r') as zip_ref:
-        zip_ref.extractall("C:/Users/xy2fo/Desktop/IR/Project/")
+        zip_ref.extractall("X:/IR/Project/IR/Project/")
         csv_path = zip_ref.namelist()[0]
 
     # Open the extracted CSV file
-    with open(f"C:/Users/xy2fo/Desktop/IR/Project/{csv_path}", 'r') as file:
+    with open(f"X:/IR/Project/IR/Project/{csv_path}", 'r') as file:
         reader = csv.reader(file)
         # Get the first row of the CSV file (usually contains the attributes)
         attributes = next(reader)
