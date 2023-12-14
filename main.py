@@ -6,7 +6,7 @@ import scipy.optimize
 import numpy as np
 from scipy.stats import pearsonr
 from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
-from deep_model import train_model
+from MF import train_model
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from keras.models import load_model
@@ -14,6 +14,7 @@ from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 import csv
 from datetime import datetime
+from NCF_torch import train_ncf_model
 
 current_hour = datetime.now().hour
 
@@ -28,7 +29,7 @@ ratings = defaultdict(list)
 users = {}
 similarities = []
 
-similarity_measure = 'cosine'
+model_use = 'cosine'
 
 # Loop over each path
 for path in paths:
@@ -77,8 +78,11 @@ num_users = ratings_df['User-ID'].nunique()
 num_books = ratings_df['ISBN'].nunique()
 
 # Train the model
-# model = train_model(ratings_df, num_users, num_books)
-model = load_model('book_recommender_model.h5')
+if model_use == 'mf':
+    model = train_model(ratings_df, num_users, num_books)
+    # model = load_model('book_recommender_model.h5')
+if model_use == 'ncf':
+    model = train_ncf_model(ratings_df, num_users, num_books, epochs=10, embedding_size=10)
 
 # Create dictionaries for user and book encodings
 user2user_encoded = {x: i for x, i in zip(user_encoder.classes_, user_encoder.transform(user_encoder.classes_))}
@@ -107,31 +111,7 @@ def cosine_similarity(isbn1, isbn2):
     # Calculate and return the cosine similarity
     return sklearn_cosine_similarity([ratings1], [ratings2])[0][0]
 
-# Now, let's implement item-based collaborative filtering
-def item_similarity(isbn1, isbn2):
-    # Get the ratings for each book
-    ratings1 = ratings[isbn1]
-    ratings2 = ratings[isbn2]
-
-    # Get the user IDs and ratings of the users who rated each book
-    user_ratings1 = {r['User-ID']: r['Book-Rating'] for r in ratings1}
-    user_ratings2 = {r['User-ID']: r['Book-Rating'] for r in ratings2}
-
-    # Find common raters
-    common_raters = [u for u in user_ratings1.keys() if u in user_ratings2.keys()]
-
-    # If there are less than two common raters, return 0
-    if len(common_raters) < 2:
-        return 0
-
-    # Get the ratings from the common raters
-    ratings1 = [user_ratings1[u] for u in common_raters]
-    ratings2 = [user_ratings2[u] for u in common_raters]
-
-    # Calculate and return the Pearson correlation
-    return pearsonr(ratings1, ratings2)[0]
-
-def recommend_books(user_id, similarity_measure=similarity_measure, num_recommendations=5):
+def recommend_books(user_id, model_use=model_use, num_recommendations=5):
     global similarities
     books = {}
     with open('Books.csv', 'r') as f:
@@ -152,11 +132,9 @@ def recommend_books(user_id, similarity_measure=similarity_measure, num_recommen
 
     if user_ratings:
         # Calculate the similarity between each of these books and all other books
-        if similarity_measure == 'pearson':
-            similarities = [(isbn, item_similarity(r['ISBN'], isbn)) for r in user_ratings for isbn in books.keys()]
-        elif similarity_measure == 'cosine':
+        elif model_use == 'cosine':
             similarities = [(isbn, cosine_similarity(r['ISBN'], isbn)) for r in user_ratings for isbn in books.keys()]
-        elif similarity_measure == 'deep':
+        elif model_use in ['mf', 'ncf']:
             # Get the books the user hasn't rated yet
             user_ratings_isbn = [r['ISBN'] for r in user_ratings]
             # Filter the unrated books
@@ -289,7 +267,7 @@ while True:
 
     elif user_id == '0' and mode.lower() == 'modify':
         # Modify mode
-        new_similarity_measure = input("Enter new similarity measure: ")
-        similarity_measure = new_similarity_measure
-        print(f"Similarity measure changed to {similarity_measure}")
+        new_model_use = input("Enter new similarity measure: ")
+        model_use = new_model_use
+        print(f"Similarity measure changed to {model_use}")
 
