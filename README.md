@@ -53,7 +53,7 @@ This project implements a book recommendation system using collaborative filteri
 
 ## Note
 
-- GPU support for TensorFlow can be checked and utilized if available, which significantly speeds up training.
+- GPU support for TensorFlow and Pytorch can be checked and utilized if available, which significantly speeds up training.
 - Ensure that the datasets (`Books.csv`, `Ratings.csv`, `Users.csv`) are correctly placed in the specified paths.
 
 ## Data
